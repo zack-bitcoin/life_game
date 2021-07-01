@@ -1,0 +1,13 @@
+/deps/
+/ebin/
+/rel/
+*.db
+*~
+.#*
+\#*
+rebar_source
+.rebar
+erl_crash.dump
+keys_backup
+a.out
+/src/c/chalang
