@@ -6,6 +6,9 @@
 -record(task, {time, animal_id}).
 
 doit() ->
+    W = settings:map_width(),
+    H = settings:map_height(),
+    add_foods(0, W*H*3),
     doit(#db{}).
 
 doit(DB) ->
@@ -61,13 +64,13 @@ doit2(Animal, Rest, DB3) ->
     {XF, YF} = step(X, Y, D),
     LocationF = board:read(XF, YF),
     SID = Animal#animal.sid,
-    Species = species:read(SID),
+    {ok, Species} = species:read(SID),
     #species{
               code = Code
             } = Species,
     {Message, SpeciesF, AnimalF} = 
         case animals:read(LocationF#location.animal_id) of
-            error -> {0,0};
+            error -> {0,0,0};
             {ok, AnimalF0} ->
                 {AnimalF0#animal.message,
                  LocationF#location.species_id,
@@ -98,7 +101,7 @@ doit2(Animal, Rest, DB3) ->
             10000, 10000, 1000, 500,
             <<>>, Code, State, 32, 2, 
             0),
-    CDB2 = chalang:run5(Code, DB3), 
+    CDB2 = chalang:run5(Code, CDB), 
     %State2 = CDB2#db.state,
     State2 = element(12, CDB2),
     Animal2 = Animal#animal{
@@ -114,15 +117,24 @@ doit2(Animal, Rest, DB3) ->
                 pain_back = 0
                },
     Stack0 = element(3, CDB2),
+    %io:fwrite(packer:pack(hd(Stack0))),
     Stack = Stack0 ++ [0,0,0,0,0],
-    Action0 = hd(Stack),
+    Action1 = hd(Stack),
+    Action0 = case Action1 of
+                  <<Action2:32>> -> Action2;
+                  _ -> 1
+              end,
     Action = if
-                 not(is_integer(Action0)) -> 1;
-                 Action0 < 0 -> 1;
+                 %not(is_integer(Action0)) -> 1;
+                 %Action0 < 0 -> 1;
                  Action0 > 7 -> 1;
                  true -> Action0
              end,
-    CoolDown0 = hd(tl(Stack)),
+    CoolDown1 = hd(tl(Stack)),
+    CoolDown0 = case CoolDown1 of
+                    <<CoolDown2:32>> -> CoolDown2;
+                    _ -> 0
+                end,
     TF = settings:tick_frequency(),
     CoolDown = 
         if
@@ -131,10 +143,27 @@ doit2(Animal, Rest, DB3) ->
             CoolDown0 > (20*TF) -> TF;
             true -> CoolDown0
         end,
+    Status = " id=" ++ 
+        integer_to_list(Animal2#animal.id) ++
+        " at=" ++
+        integer_to_list(X) ++
+        " " ++
+        integer_to_list(Y) ++
+        " direction=" ++
+        integer_to_list(D) ++
+        " time=" ++
+        integer_to_list(Time) ++
+        " energy=" ++
+        integer_to_list(Animal2#animal.energy) ++
+        " ",
+    %io:fwrite(Status),
     {Animal3, TaskList} = 
         case Action of
-            1 -> {Animal2, Rest}; %wait
+            1 -> 
+                io:fwrite("waited\n"),
+                {Animal2, Rest}; %wait
             2 -> %step
+                %io:fwrite("took a step\n"),
                 case SpeciesF of
                     0 ->
                         board:remove_animal(
@@ -142,14 +171,27 @@ doit2(Animal, Rest, DB3) ->
                         board:add_animal(
                           XF, YF, Animal2#animal.id, 
                           SID, D, Time),
+                        MW = settings:map_width(),
+                        MH = settings:map_height(),
                         {Animal2#animal{
-                           location = {XF, YF}},
+                           %location = {XF, YF}},
+                           location = {((XF + MW) rem MW),
+                                       ((YF+MH) rem MH)}},
                          Rest};
                     _ -> %cannot step because an animal is blocking you.
                         {Animal2, Rest}
                 end;
             3 ->%turn 
-                TurnAmount = hd(tl(tl(Stack))),
+                io:fwrite("turning\n"),
+                TurnAmount0 = hd(tl(tl(Stack))),
+                TurnAmount = case TurnAmount0 of
+                                  <<1:32>> -> 1;
+                                  <<2:32>> -> 2;
+                                  <<3:32>> -> 3;
+                                  _ -> 1
+                              end,
+                S = "turned " ++ integer_to_list(TurnAmount) ++ " right \n",
+                io:fwrite(S),
                 NewDirection = new_direction(
                                  D,
                                  TurnAmount),
@@ -158,6 +200,7 @@ doit2(Animal, Rest, DB3) ->
                    direction = NewDirection},
                  Rest};
             4 -> %eat
+                %io:fwrite("eating food\n"),
                 case Location#location.food of
                     0 -> {Animal2, Rest};
                     1 ->
@@ -166,6 +209,7 @@ doit2(Animal, Rest, DB3) ->
                          Rest}
                 end;
             5 -> %attack
+                io:fwrite("attacking\n"),
                 case SpeciesF of
                     0 -> {Animal2, Rest};%nothing to attack
                     _ ->
@@ -199,6 +243,7 @@ doit2(Animal, Rest, DB3) ->
                         end
                 end;
             6 -> %reproduce
+                %io:fwrite("reproducing\n"),
                 case SpeciesF of
                     0 ->
                         CodeLength = size(Code),
@@ -210,7 +255,6 @@ doit2(Animal, Rest, DB3) ->
                                 %not enough energy
                                 {Animal2, Rest};
                             true ->
-                                Animal7=Animal2#animal{energy = Energy},
                                 BAID = animals:new(SID, {XF, YF}, Time),
                                 BabyDirection =
                                     case Animal2#animal.direction of
@@ -219,6 +263,7 @@ doit2(Animal, Rest, DB3) ->
                                         3 -> 4;
                                         4 -> 2
                                     end,
+                                Animal7=Animal2#animal{energy = Energy, direction = BabyDirection},
                                 board:add_animal(XF, YF, BAID, SID, BabyDirection, Time),
                                 BabyTask = #task{time = Time, animal_id = BAID},
                                 {Animal7,
@@ -276,9 +321,15 @@ pain_from(4, 4) -> pain_back.
 
     
 
-insert_task(Task, TaskList) ->
-    %binary insertion sort into ordered list.
-    ok.
+insert_task(Task, []) -> [Task];
+insert_task(Task, [H|T]) ->
+    %todo. should do binary insertion sort into ordered list.
+    NT = Task#task.time,
+    Time = H#task.time,
+    if
+        NT < Time -> [Task|[H|T]];
+        true -> [H|insert_task(Task, T)]
+    end.
 
 step(X, Y, 1) ->
     {X, Y+1};
@@ -380,6 +431,8 @@ likelyhood(Time, X, Y) ->
 try_add_food(Time) ->
     {X, Y} = get_random_location(),
     L = likelyhood(Time, X, Y),
+    %io:fwrite(float_to_list(L)),
+    %io:fwrite("\n"),
     R = random:uniform(),
     if
         (L > R) -> 

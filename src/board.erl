@@ -40,11 +40,9 @@ handle_cast({change_tag, W, H, T}, X) ->
     R2 = setelement(W, R, L2),
     X2 = setelement(H, X, R2),
     {noreply, X2};
-handle_cast({add_animal, W0, H0, AID, 
+handle_cast({add_animal, W, H, AID, 
              SID, Direction, Time}, 
             X) -> 
-    W = W0 rem settings:map_width(),
-    H = H0 rem settings:map_height(),
     R = element(H, X),
     L = element(W, R),
     #location{animal_id = AID0} = L,
@@ -110,8 +108,8 @@ read(X, Y) ->
     gen_server:call(?MODULE, {read, X2, Y2}).
 add_food(X, Y) ->
     {X2, Y2} = sanitize(X, Y),
-    S = "adding food " ++ integer_to_list(X2) ++ " " ++ integer_to_list(Y2) ++ "\n",
-    io:fwrite(S),
+    %S = "adding food " ++ integer_to_list(X2) ++ " " ++ integer_to_list(Y2) ++ "\n",
+    %io:fwrite(S),
     gen_server:cast(?MODULE, {add_food, X2, Y2}).
 remove_food(X, Y) ->
     {X2, Y2} = sanitize(X, Y),

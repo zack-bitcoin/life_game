@@ -2,7 +2,8 @@
 -behaviour(gen_server).
 -export([start_link/0,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2,
 
-hurt_from/2,update/1,new/3,read/1,delete/1
+hurt_from/2,update/1,new/3,read/1,delete/1,
+empty_animal/3, many/0
 ]).
 % if energy or health run out, it dies.
 % health is constantly regenerating, and shrinks when you are attacked.
@@ -10,7 +11,7 @@ hurt_from/2,update/1,new/3,read/1,delete/1
 
 -include("records.hrl").
 
--record(db, {height = 1, dict = dict:new()}).
+-record(db, {height = 1, many = 0, dict = dict:new()}).
 
 init(ok) -> {ok, #db{}}.
 start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, ok, []).
@@ -22,7 +23,7 @@ handle_cast({update, AID, Animal}, X) ->
         error -> 
             io:fwrite("animal does not exist\n"),
             {noreply, X};
-        {ok, Animal} ->
+        {ok, _} ->
             D2 = dict:store(AID, Animal, X#db.dict),
             X2 = X#db{dict = D2},
             {noreply, X2}
@@ -50,7 +51,8 @@ handle_cast({hurt_from, AID, FromLocation}, X) ->
     end;
 handle_cast({delete, AID}, X) -> 
     D2 = dict:erase(AID, X#db.dict),
-    X2 = X#db{dict = D2},
+    X2 = X#db{dict = D2,
+             many = X#db.many - 1},
     {noreply, X2};
 handle_cast(_, X) -> {noreply, X}.
 handle_call({new, Animal}, _, X) -> 
@@ -59,12 +61,18 @@ handle_call({new, Animal}, _, X) ->
                 id = AID},
     D2 = dict:store(AID, Animal2, X#db.dict),
     X2 = X#db{height = AID + 1,
+              many = X#db.many + 1,
               dict = D2},
     {reply, AID, X2};
 handle_call({read, AID}, _From, X) -> 
-    Response = dict:find(AID, X),
+    Response = dict:find(AID, X#db.dict),
     {reply, Response, X};
+handle_call(many, _From, X) -> 
+    {reply, X#db.many, X};
 handle_call(_, _From, X) -> {reply, X, X}.
+
+many() ->
+    gen_server:call(?MODULE, many).
 
 hurt_from_relative_direction({W1, H1},{W2, H2}, Animal) ->
     Wd = W2 - W1,
@@ -90,23 +98,26 @@ list_of(0, _) -> [];
 list_of(N, X) ->
     [X|list_of(N-1, X)].
 
-new(SpeciesID, Location, Time) ->
-    %todo: set one of the bits to zero so it knows it is new.
-    A = #animal{
+empty_animal(SpeciesID, Location, Time) ->
+    #animal{
       sid = SpeciesID,
       health = settings:health(),
       energy = settings:energy(),
       memory1 = empty_bits(),
       memory8 = empty_bits(),
       memory32 = empty_32s(),
-      direction = up,
+      direction = 1,
       location = Location,
       last_time = Time,
       pain_front = false,
       pain_left = false,
       pain_right = false,
       pain_back = false
-    },
+    }.
+
+new(SpeciesID, Location, Time) ->
+    %todo: set one of the bits to zero so it knows it is new.
+    A = empty_animal(SpeciesID, Location, Time),
     gen_server:call(?MODULE, {new, A}).
 update(Animal) ->
     AID = Animal#animal.id,
@@ -116,4 +127,7 @@ hurt_from(AnimalID, Location) ->
     gen_server:cast(
       ?MODULE, {hurt_from, AnimalID, Location}).
 delete(AID) ->
+    %io:fwrite("animal died "),
+    %io:fwrite(integer_to_list(AID)),
+    %io:fwrite("\n"),
     gen_server:cast(?MODULE, {delete, AID}).

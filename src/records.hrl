@@ -20,12 +20,13 @@
 	 }).
 
 -record(animal, 
-        {id = 0, sid, health, energy,
-         memory1, memory8, memory32,
+        {id = 0, location, sid,
+         health, energy, last_time,
          direction = 1, message = <<0:256>>,
-         location, last_time,
          pain_front = 0, pain_left = 0,
-         pain_right = 0, pain_back = 0}).
+         pain_right = 0, pain_back = 0,
+         memory1, memory8, memory32
+         }).
 
 -record(species, {
           id, acc_id, animals = [], code

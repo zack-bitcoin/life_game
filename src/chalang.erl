@@ -73,21 +73,21 @@ time_gas(D) -> D#d.op_gas.
 -define(recall_bit, 182).
 -define(memorize_byte, 183).
 -define(recall_byte, 184).
--define(memorize_32, 183).
--define(recall_32, 184).
+-define(memorize_32, 185).
+-define(recall_32, 186).
 %todo below here
--define(look, 185).
--define(smell_animal, 186).
--define(smell_tile, 187).
--define(smell_food, 188).
--define(check_random, 189).
--define(pain_front, 190).
--define(pain_left, 191).
--define(pain_right, 192).
--define(pain_back, 193).
--define(energy, 194).
--define(health, 195).
--define(time, 196).
+-define(look, 187).
+-define(smell_animal, 188).
+-define(smell_tile, 189).
+-define(smell_food, 190).
+-define(pain_front, 191).
+-define(pain_left, 192).
+-define(pain_right, 193).
+-define(pain_back, 194).
+-define(energy, 195).
+-define(health, 196).
+-define(time, 197).
+-define(check_random, 198).
 
 
 -define(int_bits, 32). %this isn't an opcode, it is for writing this same page. chalang.erl
@@ -876,11 +876,13 @@ run4(?smell_tile, D) ->
     S = D#d.state,
     V = S#state.smell_tile,
     M = case V of
-            0 -> 1;
+            <<0>> -> 1;
             _ -> 2
         end,
+    <<X>> = V,
+    V2 = <<X:32>>,
     D#d{
-      stack = [V|D#d.stack],
+      stack = [V2|D#d.stack],
       op_gas = D#d.op_gas - 1,
       ram_current = D#d.ram_current + M
      };
@@ -888,7 +890,7 @@ run4(?smell_food, D) ->
     S = D#d.state,
     V = S#state.smell_food,
     D#d{
-      stack = [V|D#d.stack],
+      stack = [<<V:32>>|D#d.stack],
       op_gas = D#d.op_gas - 1,
       ram_current = D#d.ram_current + 1
      };
@@ -936,7 +938,7 @@ run4(?energy, D) ->
     S = D#d.state,
     V = S#state.energy,
     D#d{
-      stack = [V|D#d.stack],
+      stack = [<<V:32>>|D#d.stack],
       op_gas = D#d.op_gas - 1,
       ram_current = D#d.ram_current + 1
      };

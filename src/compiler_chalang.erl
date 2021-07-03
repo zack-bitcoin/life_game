@@ -322,6 +322,25 @@ w2o(<<"++">>) -> 134;
 w2o(<<"split">>) -> 135;
 w2o(<<"reverse">>) -> 136;
 w2o(<<"is_list">>) -> 137;
+w2o(<<"!1">>) -> 181;%memorize bit
+w2o(<<"@1">>) -> 182;%recall bit
+w2o(<<"!8">>) -> 183;%memorize byte
+w2o(<<"@8">>) -> 184;%recall byte
+w2o(<<"!32">>) -> 185;%memorize 32
+w2o(<<"@32">>) -> 186;%recall 32
+w2o(<<"look">>) -> 187;
+w2o(<<"smell_animal">>) -> 188;
+w2o(<<"smell_tile">>) -> 189;
+w2o(<<"smell_food">>) -> 190;
+w2o(<<"pain_front">>) -> 191;
+w2o(<<"pain_left">>) -> 192;
+w2o(<<"pain_right">>) -> 193;
+w2o(<<"pain_back">>) -> 194;
+w2o(<<"energy">>) -> 195;
+w2o(<<"health">>) -> 196;
+w2o(<<"time">>) -> 197;
+w2o(<<"random">>) -> 198;
+
 w2o(_) -> not_op.
 %to_opcodes([<<"or_die">>|R], F, Out) ->
     %( bool -- )
