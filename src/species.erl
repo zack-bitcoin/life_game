@@ -2,7 +2,7 @@
 -behaviour(gen_server).
 -export([start_link/0,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2,
 
-new/1, read/1
+new/2, read/1
 ]).
 
 -include("records.hrl").
@@ -30,8 +30,8 @@ handle_call({new, S}, _From, X) ->
     {reply, H, X2};
 handle_call(_, _From, X) -> {reply, X, X}.
 
-new(Code) ->
-    S = #species{code = Code},
+new(AccID, Code) ->
+    S = #species{code = Code, acc_id = AccID},
     gen_server:call(?MODULE, {new, S}).
 read(ID) ->
     gen_server:call(?MODULE, {read, ID}).

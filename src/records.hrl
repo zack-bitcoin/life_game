@@ -1,8 +1,9 @@
 
 -record(state, {
-          memorized_bits,
-          memorized_bytes,
-          memorized_32s,
+               display, 
+          memory1,
+          memory8,
+          memory32,
           can_see,%some sort of structure containing visual information about everything we can see.
           smell_animal,%0||[species, message]
           smell_tile,%0||[recent_visitor, how long_since_visitor]
@@ -19,12 +20,22 @@
 	 }).
 
 -record(animal, 
-        {id = 0, acc_id, sid, health, energy,
-         memory, default_cooldown,
-         direction, location, last_time,
-         pain_front, pain_left, pain_right, 
-         pain_back}).
+        {id = 0, sid, health, energy,
+         memory1, memory8, memory32,
+         direction = 1, message = <<0:256>>,
+         location, last_time,
+         pain_front = 0, pain_left = 0,
+         pain_right = 0, pain_back = 0}).
 
 -record(species, {
-          id, animals = [], code
+          id, acc_id, animals = [], code
+         }).
+-record(location, {
+          food = 0,
+          tag = <<0:256>>,
+          smell_species = 0,
+          smell_age = 0,
+          animal_id = 0,
+          species_id = 0,
+          direction = 0
          }).

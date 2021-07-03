@@ -1,6 +1,7 @@
 -module(chalang).
 -export([run5/2, data_maker/9, data_maker/10, test/6, vm/6, replace/3, split/2, none_of/1, stack/1, time_gas/1]).
 -include("records.hrl").
+
 -record(d, {op_gas = 0, stack = [], alt = [],
 	    ram_current = 0, ram_most = 0, ram_limit = 0, 
 	    vars = {},  
@@ -67,6 +68,26 @@ time_gas(D) -> D#d.op_gas.
 -define(split, 135).
 -define(reverse, 136).
 -define(is_list, 137).
+-define(display, 180).%display a 32 byte message on your body that can be smelled.
+-define(memorize_bit, 181).
+-define(recall_bit, 182).
+-define(memorize_byte, 183).
+-define(recall_byte, 184).
+-define(memorize_32, 183).
+-define(recall_32, 184).
+%todo below here
+-define(look, 185).
+-define(smell_animal, 186).
+-define(smell_tile, 187).
+-define(smell_food, 188).
+-define(check_random, 189).
+-define(pain_front, 190).
+-define(pain_left, 191).
+-define(pain_right, 192).
+-define(pain_back, 193).
+-define(energy, 194).
+-define(health, 195).
+-define(time, 196).
 
 
 -define(int_bits, 32). %this isn't an opcode, it is for writing this same page. chalang.erl
@@ -676,6 +697,265 @@ run4(?is_list, D) ->
                 ram_current = D#d.ram_current - 1};
         _ -> {error, "is_list stack underflow"}
     end;
+run4(?display, D) ->
+    case D#d.stack of
+        [<<Value:256>>|T] ->
+            S = D#d.state,
+            S2 = S#state{display = <<Value:256>>},
+            D#d{state = S2};
+        _ -> {error, "bad display data"}
+    end;
+run4(?memorize_bit, D) ->
+    BS = settings:storage_bit(),
+    case D#d.stack of
+        [Key|[Value|T]] ->
+            if
+                not(is_integer(Key)) ->
+                    {error, "bad bit memorization key"};
+                (Key < 0) ->
+                    {error, "negative bit memorization key"};
+                (Key > BS) ->
+                    {error, "memorization bit out of range"};
+                (not((Value == 0) or (Value == 1))) ->
+                    {error, "bad bit storage"};
+                true ->
+                    S1 = D#d.state,
+                    M2 = setelement(Key, S1#state.memory1, Value),
+                    S2 = D#d.state#state{
+                               memory1 = M2
+                              },
+                    D#d{state = S2,
+                        op_gas = D#d.op_gas - 1,
+                        stack = T
+                       }
+            end;
+        _ -> {error, "memorize bit stack underflow"}
+    end;
+run4(?recall_bit, D) ->
+    BS = settings:storage_bit(),
+    case D#d.stack of
+        [Key|T] ->
+            if
+                not(is_integer(Key)) ->
+                    {error, "bad recall bit key"};
+                (Key < 0) ->
+                    {error, "negative bit recall key"};
+                (Key > BS) ->
+                    {error, "bit recall out of range"};
+                true ->
+                    S = D#d.state,
+                    V = element(Key, S#state.memory1),
+                    D#d{stack = [V|T],
+                       op_gas = D#d.op_gas - 1,
+                       ram_current = D#d.ram_current + 1}
+            end;
+        _ -> {error, "recall bit stack underflow"}
+    end;
+run4(?memorize_byte, D) ->
+    BS = settings:storage_byte(),
+    case D#d.stack of
+        [Key|[Value|T]] ->
+            if
+                not(is_integer(Key)) ->
+                    {error, "bad byte memorization key"};
+                (Key < 0) ->
+                    {error, "negative byte memorization key"};
+                (Key > BS) ->
+                    {error, "memorization byte out of range"};
+                (Value < 0) ->
+                    {error, "negative byte error"};
+                (Value > 7) ->
+                    {error, "big byte error"};
+                true ->
+                    S1 = D#d.state,
+                    M2 = setelement(Key, S1#state.memory8, Value),
+                    S2 = D#d.state#state{
+                               memory8 = M2
+                              },
+                    D#d{state = S2,
+                        op_gas = D#d.op_gas - 1,
+                        stack = T
+                       }
+            end;
+        _ -> {error, "memorize byte stack underflow"}
+    end;
+run4(?recall_byte, D) ->
+    BS = settings:storage_byte(),
+    case D#d.stack of
+        [Key|T] ->
+            if
+                not(is_integer(Key)) ->
+                    {error, "bad recall byte key"};
+                (Key < 0) ->
+                    {error, "negative byte recall key"};
+                (Key > BS) ->
+                    {error, "byte recall out of range"};
+                true ->
+                    S = D#d.state,
+                    V = element(Key, S#state.memory8),
+                    D#d{stack = [V|T],
+                       op_gas = D#d.op_gas - 1,
+                       ram_current = D#d.ram_current + 1}
+            end;
+        _ -> {error, "recall byte stack underflow"}
+    end;
+run4(?memorize_32, D) ->
+    BS = settings:storage_32(),
+    case D#d.stack of
+        [Key|[<<Value:256>>|T]] ->
+            if
+                not(is_integer(Key)) ->
+                    {error, "bad 32 memorization key"};
+                (Key < 0) ->
+                    {error, "negative 32 memorization key"};
+                (Key > BS) ->
+                    {error, "memorization 32 out of range"};
+                true ->
+                    S1 = D#d.state,
+                    M2 = setelement(Key, S1#state.memory32, <<Value:256>>),
+                    S2 = D#d.state#state{
+                               memory32 = M2
+                              },
+                    D#d{state = S2,
+                        op_gas = D#d.op_gas - 1,
+                        stack = T
+                       }
+            end;
+        _ -> {error, "memorize 32 stack underflow"}
+    end;
+run4(?recall_32, D) ->
+    BS = settings:storage_32(),
+    case D#d.stack of
+        [Key|T] ->
+            if
+                not(is_integer(Key)) ->
+                    {error, "bad recall 32 key"};
+                (Key < 0) ->
+                    {error, "negative 32 recall key"};
+                (Key > BS) ->
+                    {error, "32 recall out of range"};
+                true ->
+                    S = D#d.state,
+                    V = element(Key, S#state.memory32),
+                    D#d{stack = [<<V:256>>|T],
+                       op_gas = D#d.op_gas - 1,
+                       ram_current = D#d.ram_current + 32}
+            end;
+        _ -> {error, "recall 32 stack underflow"}
+    end;
+run4(?look, D) -> 
+    case D#d.stack of
+        [W|[H|T]] ->
+            S = D#d.state,
+            CS = S#state.can_see,
+            case board:view(W, H, CS) of
+                not_visible_error -> {error, "range error"};
+                V ->
+                    V2 = [V#location.food,
+                          V#location.species_id,
+                          V#location.direction],
+                    D#d{stack = [V2|T],
+                        op_gas = D#d.op_gas - 1,
+                        ram_current = D#d.ram_current + 3}
+            end;
+        _ -> {error, "look stack underflow"}
+    end;
+run4(?smell_animal, D) ->
+    S = D#d.state,
+    V = S#state.smell_animal,
+    M = case V of
+            0 -> 1;
+            _ -> 33
+        end,
+    D#d{
+      stack = [V|D#d.stack],
+      op_gas = D#d.op_gas - 1,
+      ram_current = D#d.ram_current + M
+       };
+run4(?smell_tile, D) ->
+    S = D#d.state,
+    V = S#state.smell_tile,
+    M = case V of
+            0 -> 1;
+            _ -> 2
+        end,
+    D#d{
+      stack = [V|D#d.stack],
+      op_gas = D#d.op_gas - 1,
+      ram_current = D#d.ram_current + M
+     };
+run4(?smell_food, D) ->
+    S = D#d.state,
+    V = S#state.smell_food,
+    D#d{
+      stack = [V|D#d.stack],
+      op_gas = D#d.op_gas - 1,
+      ram_current = D#d.ram_current + 1
+     };
+run4(?check_random, D) ->
+    S = D#d.state,
+    V = S#state.random,
+    D#d{
+      stack = [V|D#d.stack],
+      op_gas = D#d.op_gas - 1,
+      ram_current = D#d.ram_current + 1
+     };
+run4(?pain_front, D) ->
+    S = D#d.state,
+    V = S#state.pain_front,
+    D#d{
+      stack = [V|D#d.stack],
+      op_gas = D#d.op_gas - 1,
+      ram_current = D#d.ram_current + 1
+     };
+run4(?pain_left, D) ->
+    S = D#d.state,
+    V = S#state.pain_left,
+    D#d{
+      stack = [V|D#d.stack],
+      op_gas = D#d.op_gas - 1,
+      ram_current = D#d.ram_current + 1
+     };
+run4(?pain_right, D) ->
+    S = D#d.state,
+    V = S#state.pain_right,
+    D#d{
+      stack = [V|D#d.stack],
+      op_gas = D#d.op_gas - 1,
+      ram_current = D#d.ram_current + 1
+     };
+run4(?pain_back, D) ->
+    S = D#d.state,
+    V = S#state.pain_back,
+    D#d{
+      stack = [V|D#d.stack],
+      op_gas = D#d.op_gas - 1,
+      ram_current = D#d.ram_current + 1
+     };
+run4(?energy, D) ->
+    S = D#d.state,
+    V = S#state.energy,
+    D#d{
+      stack = [V|D#d.stack],
+      op_gas = D#d.op_gas - 1,
+      ram_current = D#d.ram_current + 1
+     };
+run4(?health, D) ->
+    S = D#d.state,
+    V = S#state.health,
+    D#d{
+      stack = [V|D#d.stack],
+      op_gas = D#d.op_gas - 1,
+      ram_current = D#d.ram_current + 1
+     };
+run4(?time, D) ->
+    S = D#d.state,
+    V = S#state.time,
+    D#d{
+      stack = [V|D#d.stack],
+      op_gas = D#d.op_gas - 1,
+      ram_current = D#d.ram_current + 1
+     };
 run4(?nop, D) -> D;
 run4(?fail, D) -> 
     {error, "fail"};

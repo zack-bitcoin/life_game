@@ -4,10 +4,10 @@ Game of Life
 =========
 
 Game of life is a programming and biology game.
-You program a living creature and through it out into the world, where it can compete against other creatures made by other players.
+You program a living creature and throw it out into the world, where it can compete against creatures made by other players.
 The animals compete for resources, and can fight.
 
-If your animal is successful, it will reproduce, passing your code to it's children, and eventually become a dominant strain of life on this planet.
+If your animal is successful, it will reproduce, passing your code to it's children, and eventually become a dominant strain of life on the simulated world.
 
 What Animals can do?
 ===================

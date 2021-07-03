@@ -10,7 +10,9 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-    spawn(fun()-> mainloop:doit() end),
+    spawn(fun()-> 
+                  timer:sleep(200),
+                  mainloop:doit() end),
     chalang_sup:start_link().
 
 stop(_State) ->

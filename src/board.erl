@@ -1,16 +1,15 @@
 -module(board).
 -behaviour(gen_server).
 -export([start_link/0,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2,
-read/2,add_food/2,remove_food/2,change_tag/3,add_account/6,account_direction/3,remove_account/2]).
--record(location, {
-          food = false,
-          tag = <<0:256>>,
-          smell_species = 0,
-          smell_age = 0,
-          account_id = 0,
-          species_id = 0,
-          direction = 0
-         }).
+
+read/2,add_food/2,remove_food/2,change_tag/3,
+add_animal/6,animal_direction/3,remove_animal/2,
+
+can_see/3, view/3,
+
+empty_location/0
+]).
+-include("records.hrl").
 init(ok) -> 
     W = settings:map_width(),
     H = settings:map_height(),
@@ -23,14 +22,14 @@ handle_info(_, X) -> {noreply, X}.
 handle_cast({remove_food, W, H}, X) -> 
     R = element(H, X),
     L = element(W, R),
-    L2 = L#location{food = false},
+    L2 = L#location{food = 0},
     R2 = setelement(W, R, L2),
     X2 = setelement(H, X, R2),
     {noreply, X2};
 handle_cast({add_food, W, H}, X) -> 
     R = element(H, X),
     L = element(W, R),
-    L2 = L#location{food = true},
+    L2 = L#location{food = 1},
     R2 = setelement(W, R, L2),
     X2 = setelement(H, X, R2),
     {noreply, X2};
@@ -41,16 +40,18 @@ handle_cast({change_tag, W, H, T}, X) ->
     R2 = setelement(W, R, L2),
     X2 = setelement(H, X, R2),
     {noreply, X2};
-handle_cast({add_account, W, H, AID, 
+handle_cast({add_animal, W0, H0, AID, 
              SID, Direction, Time}, 
             X) -> 
+    W = W0 rem settings:map_width(),
+    H = H0 rem settings:map_height(),
     R = element(H, X),
     L = element(W, R),
-    #location{account_id = AID0} = L,
+    #location{animal_id = AID0} = L,
     case AID0 of
         0 ->
             L2 = L#location{
-                  account_id = AID,
+                  animal_id = AID,
                   direction = Direction,
                   species_id = SID,
                   smell_species = SID,
@@ -60,20 +61,20 @@ handle_cast({add_account, W, H, AID,
             {noreply, X2};
         _ -> {noreply, X}
     end; 
-handle_cast({account_direction, W, H, D}, X) ->
+handle_cast({animal_direction, W, H, D}, X) ->
     R = element(H, X),
     L = element(W, R),
     L2 = L#location{direction = D},
     R2 = setelement(W, R, L2),
     X2 = setelement(H, X, R2),
     {noreply, X2};
-handle_cast({remove_account, W, H}, X) -> 
+handle_cast({remove_animal, W, H}, X) -> 
     R = element(H, X),
     L = element(W, R),
     L2 = L#location{
            direction = 0,
            species_id = 0,
-           account_id = 0
+           animal_id = 0
           },
     R2 = setelement(W, R, L2),
     X2 = setelement(H, X, R2),
@@ -83,6 +84,9 @@ handle_call({read, W, H}, _From, X) ->
     R = element(H, X),
     L = element(W, R),
     {reply, L, X};
+handle_call(empty_location, _From, X) -> 
+    E = empty_location_internal(X, 10),
+    {reply, E, X};
 handle_call(_, _From, X) -> {reply, X, X}.
 
 make_rows(0, _) -> [];
@@ -94,16 +98,30 @@ make_row(N) ->
     [#location{}|
      make_row(N-1)].
 
+sanitize(X, Y) ->
+    MW = settings:map_width(),
+    MH = settings:map_height(),
+    X2 = (X-1+MW) rem MW,
+    Y2 = (Y-1+MH) rem MH,
+    {X2+1, Y2+1}.
+
 read(X, Y) ->
-    gen_server:call(?MODULE, {read, X, Y}).
+    {X2, Y2} = sanitize(X, Y),
+    gen_server:call(?MODULE, {read, X2, Y2}).
 add_food(X, Y) ->
-    gen_server:cast(?MODULE, {add_food, X, Y}).
+    {X2, Y2} = sanitize(X, Y),
+    S = "adding food " ++ integer_to_list(X2) ++ " " ++ integer_to_list(Y2) ++ "\n",
+    io:fwrite(S),
+    gen_server:cast(?MODULE, {add_food, X2, Y2}).
 remove_food(X, Y) ->
-    gen_server:cast(?MODULE, {remove_food, X, Y}).
+    {X2, Y2} = sanitize(X, Y),
+    gen_server:cast(?MODULE, {remove_food, X2, Y2}).
 change_tag(X, Y, T) ->
+    {X2, Y2} = sanitize(X, Y),
     <<_:256>> = T,
-    gen_server:cast(?MODULE, {change_tag, X, Y, T}).
-add_account(X, Y, AID, SID, Direction, Time) ->
+    gen_server:cast(?MODULE, {change_tag, X2, Y2, T}).
+add_animal(X, Y, AID, SID, Direction, Time) ->
+    {X2, Y2} = sanitize(X, Y),
     case Direction of
         1 -> ok;
         2 -> ok;
@@ -111,9 +129,10 @@ add_account(X, Y, AID, SID, Direction, Time) ->
         4 -> ok
     end,
     gen_server:cast(?MODULE, 
-                    {add_account, X, Y, AID, 
+                    {add_animal, X2, Y2, AID, 
                      SID, Direction, Time}).
-account_direction(X, Y, Direction) ->
+animal_direction(X, Y, Direction) ->
+    {X2, Y2} = sanitize(X, Y),
     case Direction of
         1 -> ok;
         2 -> ok;
@@ -121,7 +140,76 @@ account_direction(X, Y, Direction) ->
         4 -> ok
     end,
     gen_server:cast(
-      ?MODULE, {account_direction, X, Y, Direction}).
-remove_account(X, Y) ->
-    gen_server:cast(?MODULE, {remove_account, X, Y}).
-                              
+      ?MODULE, {animal_direction, X2, Y2, Direction}).
+remove_animal(X, Y) ->
+    {X2, Y2} = sanitize(X, Y),
+    gen_server:cast(?MODULE, {remove_animal, X2, Y2}).
+empty_location() ->
+    gen_server:call(?MODULE, empty_location).
+empty_location_internal(_, 0) ->
+    full_board_error;
+empty_location_internal(X, N) ->
+    <<R1:40>> = crypto:strong_rand_bytes(5),
+    <<R2:40>> = crypto:strong_rand_bytes(5),
+    W = R1 rem settings:map_width(),
+    H = R2 rem settings:map_height(),
+    %Location = read(W, H),
+    Row = element(H+1, X),
+    Location = element(W+1, Row),
+    case Location#location.animal_id of
+        0 -> {W, H};
+        _ -> empty_location_internal(X, N-1)
+    end.
+
+can_see(X, Y, 1) ->%up
+    {read(X, Y),
+     {read(X-1, Y+1), read(X, Y+1), read(X+1, Y+1)},
+     {read(X-2, Y+2), read(X-1, Y+2), read(X, Y+2),
+      read(X+1, Y+2), read(X+2, Y+2)}};
+can_see(X, Y, 2) ->%left
+    {read(X, Y),
+     {read(X-1, Y-1), read(X-1, Y), read(X-1, Y+1)},
+     {read(X-2, Y-2), read(X-2, Y-1), read(X-2, Y),
+      read(X-2, Y+1), read(X-2, Y+2)}};
+can_see(X, Y, 3) ->%right
+    {read(X, Y),
+     {read(X+1, Y+1), read(X+1, Y), read(X+1, Y-1)},
+     {read(X+2, Y+2), read(X+2, Y+1), read(X+2, Y),
+      read(X+2, Y-1), read(X+2, Y-2)}};
+can_see(X, Y, 4) ->%down
+    {read(X, Y),
+     {read(X+1, Y-1), read(X, Y-1), read(X-1, Y-1)},
+     {read(X+2, Y-2), read(X+1, Y-2), read(X, Y-2),
+      read(X-1, Y-2), read(X-2, Y-2)}}.
+
+view(X, Y, CanSee) ->
+    %grab vision info for a point in the data from can_see
+    case {X, Y} of
+        {0, 0} -> element(1, CanSee);
+        {-1, 1} -> 
+            C = element(2, CanSee),
+            element(1, C);
+        {0, 1} ->
+            C = element(2, CanSee),
+            element(2, C);
+        {1, 1} ->
+            C = element(2, CanSee),
+            element(3, C);
+        {-2, 2} -> 
+            C = element(3, CanSee),
+            element(1, C);
+        {-1, 2} -> 
+            C = element(3, CanSee),
+            element(2, C);
+        {0, 2} -> 
+            C = element(3, CanSee),
+            element(3, C);
+        {1, 2} -> 
+            C = element(3, CanSee),
+            element(4, C);
+        {2, 2} -> 
+            C = element(3, CanSee),
+            element(5, C);
+        _ ->
+            not_visible_error
+    end.
