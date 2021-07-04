@@ -29,7 +29,8 @@ init([]) ->
                 ?CHILD(accounts, worker),
                 ?CHILD(species, worker),
                 ?CHILD(animals, worker),
-                ?CHILD(birthing, worker)
+                ?CHILD(birthing, worker),
+                ?CHILD(board_cache, worker)
 	       ],
     {ok, { {one_for_one, 5, 10}, Children} }.
 

@@ -3,7 +3,7 @@
 -export([start_link/0,code_change/3,handle_call/3,handle_cast/2,handle_info/2,init/1,terminate/2,
 
 hurt_from/2,update/1,new/3,read/1,delete/1,
-empty_animal/3, many/0
+empty_animal/3, many/0, deaths/0
 ]).
 % if energy or health run out, it dies.
 % health is constantly regenerating, and shrinks when you are attacked.
@@ -11,7 +11,7 @@ empty_animal/3, many/0
 
 -include("records.hrl").
 
--record(db, {height = 1, many = 0, dict = dict:new()}).
+-record(db, {height = 1, many = 0, deaths = 0, dict = dict:new()}).
 
 init(ok) -> {ok, #db{}}.
 start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, ok, []).
@@ -52,7 +52,8 @@ handle_cast({hurt_from, AID, FromLocation}, X) ->
 handle_cast({delete, AID}, X) -> 
     D2 = dict:erase(AID, X#db.dict),
     X2 = X#db{dict = D2,
-             many = X#db.many - 1},
+             many = X#db.many - 1,
+             deaths = X#db.deaths + 1},
     {noreply, X2};
 handle_cast(_, X) -> {noreply, X}.
 handle_call({new, Animal}, _, X) -> 
@@ -69,10 +70,14 @@ handle_call({read, AID}, _From, X) ->
     {reply, Response, X};
 handle_call(many, _From, X) -> 
     {reply, X#db.many, X};
+handle_call(deaths, _From, X) -> 
+    {reply, X#db.deaths, X};
 handle_call(_, _From, X) -> {reply, X, X}.
 
 many() ->
     gen_server:call(?MODULE, many).
+deaths() ->
+    gen_server:call(?MODULE, deaths).
 
 hurt_from_relative_direction({W1, H1},{W2, H2}, Animal) ->
     Wd = W2 - W1,

@@ -13,6 +13,9 @@ start(_StartType, _StartArgs) ->
     spawn(fun()-> 
                   timer:sleep(200),
                   mainloop:doit() end),
+    spawn(fun()-> 
+                  timer:sleep(200),
+                  board_cache:cron() end),
     chalang_sup:start_link().
 
 stop(_State) ->

@@ -75,12 +75,15 @@ tag_tile ( 32 bytes cooldown -> )
 
 api
 ============
+* add animal: (code -> sid). look at test:doit()
+* look at board: board_cache:read().
+* lookup species_code: species:read(ID). then grab code part.
+* lookup species_animals: species:read(ID). then grab animals part.
+* lookup animal: animals:read(ID).
+
+
+
 * add account: (pub name -> ).
-* add animal: (acc code -> sid). (needs signature and nonce)
-* region snapshot: (location -> see the animals and food in a section of the map)
-* lookup species_code: (sid -> code)
-* lookup species_animals: (sid -> animals)
-* lookup animal: (aid -> data)
 * lookup account: (pub/aid -> balance, points, species)
 
 

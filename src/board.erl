@@ -7,7 +7,7 @@ add_animal/6,animal_direction/3,remove_animal/2,
 
 can_see/3, view/3,
 
-empty_location/0
+empty_location/0, all/0
 ]).
 -include("records.hrl").
 init(ok) -> 
@@ -85,7 +85,12 @@ handle_call({read, W, H}, _From, X) ->
 handle_call(empty_location, _From, X) -> 
     E = empty_location_internal(X, 10),
     {reply, E, X};
+handle_call(all, _From, X) -> 
+    {reply, X, X};
 handle_call(_, _From, X) -> {reply, X, X}.
+
+all() ->
+    gen_server:call(?MODULE, all).
 
 make_rows(0, _) -> [];
 make_rows(N, W) -> 
