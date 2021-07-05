@@ -87,7 +87,7 @@ time_gas(D) -> D#d.op_gas.
 -define(energy, 195).
 -define(health, 196).
 -define(time, 197).
--define(check_random, 198).
+-define(random, 198).
 
 
 -define(int_bits, 32). %this isn't an opcode, it is for writing this same page. chalang.erl
@@ -708,7 +708,7 @@ run4(?display, D) ->
 run4(?memorize_bit, D) ->
     BS = settings:storage_bit(),
     case D#d.stack of
-        [Key|[Value|T]] ->
+        [<<Key:32>>|[<<Value:32>>|T]] ->
             if
                 not(is_integer(Key)) ->
                     {error, "bad bit memorization key"};
@@ -734,7 +734,7 @@ run4(?memorize_bit, D) ->
 run4(?recall_bit, D) ->
     BS = settings:storage_bit(),
     case D#d.stack of
-        [Key|T] ->
+        [<<Key:32>>|T] ->
             if
                 not(is_integer(Key)) ->
                     {error, "bad recall bit key"};
@@ -745,7 +745,7 @@ run4(?recall_bit, D) ->
                 true ->
                     S = D#d.state,
                     V = element(Key, S#state.memory1),
-                    D#d{stack = [V|T],
+                    D#d{stack = [<<V:32>>|T],
                        op_gas = D#d.op_gas - 1,
                        ram_current = D#d.ram_current + 1}
             end;
@@ -754,7 +754,7 @@ run4(?recall_bit, D) ->
 run4(?memorize_byte, D) ->
     BS = settings:storage_byte(),
     case D#d.stack of
-        [Key|[Value|T]] ->
+        [<<Key:32>>|[<<Value:32>>|T]] ->
             if
                 not(is_integer(Key)) ->
                     {error, "bad byte memorization key"};
@@ -764,7 +764,7 @@ run4(?memorize_byte, D) ->
                     {error, "memorization byte out of range"};
                 (Value < 0) ->
                     {error, "negative byte error"};
-                (Value > 7) ->
+                (Value > 255) ->
                     {error, "big byte error"};
                 true ->
                     S1 = D#d.state,
@@ -782,7 +782,7 @@ run4(?memorize_byte, D) ->
 run4(?recall_byte, D) ->
     BS = settings:storage_byte(),
     case D#d.stack of
-        [Key|T] ->
+        [<<Key:32>>|T] ->
             if
                 not(is_integer(Key)) ->
                     {error, "bad recall byte key"};
@@ -793,7 +793,7 @@ run4(?recall_byte, D) ->
                 true ->
                     S = D#d.state,
                     V = element(Key, S#state.memory8),
-                    D#d{stack = [V|T],
+                    D#d{stack = [<<V:32>>|T],
                        op_gas = D#d.op_gas - 1,
                        ram_current = D#d.ram_current + 1}
             end;
@@ -802,7 +802,7 @@ run4(?recall_byte, D) ->
 run4(?memorize_32, D) ->
     BS = settings:storage_32(),
     case D#d.stack of
-        [Key|[<<Value:256>>|T]] ->
+        [<<Key:32>>|[<<Value:256>>|T]] ->
             if
                 not(is_integer(Key)) ->
                     {error, "bad 32 memorization key"};
@@ -826,7 +826,7 @@ run4(?memorize_32, D) ->
 run4(?recall_32, D) ->
     BS = settings:storage_32(),
     case D#d.stack of
-        [Key|T] ->
+        [<<Key:32>>|T] ->
             if
                 not(is_integer(Key)) ->
                     {error, "bad recall 32 key"};
@@ -837,7 +837,8 @@ run4(?recall_32, D) ->
                 true ->
                     S = D#d.state,
                     V = element(Key, S#state.memory32),
-                    D#d{stack = [<<V:256>>|T],
+                    %D#d{stack = [<<V:256>>|T],
+                    D#d{stack = [V|T],
                        op_gas = D#d.op_gas - 1,
                        ram_current = D#d.ram_current + 32}
             end;
@@ -845,15 +846,17 @@ run4(?recall_32, D) ->
     end;
 run4(?look, D) -> 
     case D#d.stack of
-        [W|[H|T]] ->
+        [<<W:32>>|[<<H:32>>|T]] ->
             S = D#d.state,
             CS = S#state.can_see,
             case board:view(W, H, CS) of
                 not_visible_error -> {error, "range error"};
                 V ->
-                    V2 = [V#location.food,
-                          V#location.species_id,
-                          V#location.direction],
+                    V2 = [<<(V#location.food):32>>,
+                          <<(V#location.species_id):32>>,
+                          <<(V#location.direction):32>>],%need to rotate this relative to your perspective direction
+                    %io:fwrite(packer:pack(V2)),
+                    %io:fwrite("\n"),
                     D#d{stack = [V2|T],
                         op_gas = D#d.op_gas - 1,
                         ram_current = D#d.ram_current + 3}
@@ -863,26 +866,23 @@ run4(?look, D) ->
 run4(?smell_animal, D) ->
     S = D#d.state,
     V = S#state.smell_animal,
-    M = case V of
-            0 -> 1;
-            _ -> 33
-        end,
+    M = 2,
+    V2 = case V of
+             [0,0] -> [<<0:32>>, <<0:32>>];
+             [Species, Binary] -> [<<Species:32>>, Binary]
+    end,
     D#d{
-      stack = [V|D#d.stack],
+      stack = [V2|D#d.stack],
       op_gas = D#d.op_gas - 1,
       ram_current = D#d.ram_current + M
        };
 run4(?smell_tile, D) ->
     S = D#d.state,
-    V = S#state.smell_tile,
-    M = case V of
-            <<0>> -> 1;
-            _ -> 2
-        end,
-    <<X>> = V,
-    V2 = <<X:32>>,
+    [V1, V2] = S#state.smell_tile,
+    V3 = [<<V1:32>>,<<V2:32>>],
+    M = 2,
     D#d{
-      stack = [V2|D#d.stack],
+      stack = [V3|D#d.stack],
       op_gas = D#d.op_gas - 1,
       ram_current = D#d.ram_current + M
      };
@@ -894,7 +894,7 @@ run4(?smell_food, D) ->
       op_gas = D#d.op_gas - 1,
       ram_current = D#d.ram_current + 1
      };
-run4(?check_random, D) ->
+run4(?random, D) ->
     S = D#d.state,
     V = S#state.random,
     D#d{
@@ -904,7 +904,7 @@ run4(?check_random, D) ->
      };
 run4(?pain_front, D) ->
     S = D#d.state,
-    V = S#state.pain_front,
+    V = <<(S#state.pain_front):32>>,
     D#d{
       stack = [V|D#d.stack],
       op_gas = D#d.op_gas - 1,
@@ -912,7 +912,7 @@ run4(?pain_front, D) ->
      };
 run4(?pain_left, D) ->
     S = D#d.state,
-    V = S#state.pain_left,
+    V = <<(S#state.pain_left):32>>,
     D#d{
       stack = [V|D#d.stack],
       op_gas = D#d.op_gas - 1,
@@ -920,7 +920,7 @@ run4(?pain_left, D) ->
      };
 run4(?pain_right, D) ->
     S = D#d.state,
-    V = S#state.pain_right,
+    V = <<(S#state.pain_right):32>>,
     D#d{
       stack = [V|D#d.stack],
       op_gas = D#d.op_gas - 1,
@@ -928,7 +928,7 @@ run4(?pain_right, D) ->
      };
 run4(?pain_back, D) ->
     S = D#d.state,
-    V = S#state.pain_back,
+    V = <<(S#state.pain_back):32>>,
     D#d{
       stack = [V|D#d.stack],
       op_gas = D#d.op_gas - 1,
@@ -944,7 +944,7 @@ run4(?energy, D) ->
      };
 run4(?health, D) ->
     S = D#d.state,
-    V = S#state.health,
+    V = <<(S#state.health):32>>,
     D#d{
       stack = [V|D#d.stack],
       op_gas = D#d.op_gas - 1,
@@ -952,7 +952,7 @@ run4(?health, D) ->
      };
 run4(?time, D) ->
     S = D#d.state,
-    V = S#state.time,
+    V = <<(S#state.time):32>>,
     D#d{
       stack = [V|D#d.stack],
       op_gas = D#d.op_gas - 1,

@@ -5,7 +5,10 @@
   {registered, []},
   {applications, [
                   kernel,
-                  stdlib
+                  stdlib,
+                  ssl,
+                  cowboy,
+                  inets
                  ]},
   {mod, { chalang_app, []}},
   {env, []}

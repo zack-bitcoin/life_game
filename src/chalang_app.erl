@@ -10,6 +10,8 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
+    inets:start(),
+    start_http(),
     spawn(fun()-> 
                   timer:sleep(200),
                   mainloop:doit() end),
@@ -20,3 +22,18 @@ start(_StartType, _StartArgs) ->
 
 stop(_State) ->
     ok.
+
+start_http() ->
+    Dispatch =
+        cowboy_router:compile(
+          [{'_', [
+		  %{"/:file", file_handler, []}%,
+		  {"/", http_handler, []},
+		  {"/[...]", file_handler, []}
+		 ]}]),
+    %{ok, Port} = application:get_env(amoveo_mining_pool, port),
+    {ok, _} = cowboy:start_clear(http,
+				 [{ip, {0,0,0,0}}, {port, 8000}],
+				 #{env => #{dispatch => Dispatch}}),
+    ok.
+    

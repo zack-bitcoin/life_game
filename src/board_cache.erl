@@ -16,7 +16,9 @@ handle_call(read, _From, X) ->
 handle_call(_, _From, X) -> {reply, X, X}.
 
 cron() ->
-    timer:sleep(1000),
+    BRR = settings:board_refresh_rate(),
+    D = 1000 div BRR,
+    timer:sleep(D),
     spawn(fun()->
                  draw_board()
           end),

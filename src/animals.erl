@@ -96,9 +96,9 @@ hurt_from_relative_direction({W1, H1},{W2, H2}, Animal) ->
 read(AnimalID) ->
     gen_server:call(?MODULE, {read, AnimalID}).
 empty_bits() ->
-    list_of(32, 0).
+    list_to_tuple(list_of(32, 0)).
 empty_32s() ->
-    list_of(32, <<0:256>>).
+    list_to_tuple(list_of(32, <<0:256>>)).
 list_of(0, _) -> [];
 list_of(N, X) ->
     [X|list_of(N-1, X)].
@@ -114,15 +114,16 @@ empty_animal(SpeciesID, Location, Time) ->
       direction = 1,
       location = Location,
       last_time = Time,
-      pain_front = false,
-      pain_left = false,
-      pain_right = false,
-      pain_back = false
+      pain_front = 0,
+      pain_left = 0,
+      pain_right = 0,
+      pain_back = 0
     }.
 
 new(SpeciesID, Location, Time) ->
     %todo: set one of the bits to zero so it knows it is new.
     A = empty_animal(SpeciesID, Location, Time),
+    %todo store in species list
     gen_server:call(?MODULE, {new, A}).
 update(Animal) ->
     AID = Animal#animal.id,
@@ -132,7 +133,5 @@ hurt_from(AnimalID, Location) ->
     gen_server:cast(
       ?MODULE, {hurt_from, AnimalID, Location}).
 delete(AID) ->
-    %io:fwrite("animal died "),
-    %io:fwrite(integer_to_list(AID)),
-    %io:fwrite("\n"),
+    %todo remove from species list
     gen_server:cast(?MODULE, {delete, AID}).

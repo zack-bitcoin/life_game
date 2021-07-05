@@ -8,7 +8,7 @@
 doit() ->
     W = settings:map_width(),
     H = settings:map_height(),
-    add_foods(0, W*H*3),
+    add_foods(0, W*H),
     doit(#db{}).
 
 doit(DB) ->
@@ -98,10 +98,19 @@ doit2(Animal, Rest, DB3) ->
      },
                             
     CDB = chalang:data_maker(
-            10000, 10000, 1000, 500,
+            1000, 2000, 1000, 500,
             <<>>, Code, State, 32, 2, 
             0),
-    CDB2 = chalang:run5(Code, CDB), 
+    CDB20 = chalang:run5(Code, CDB), 
+    {CDB2, EnergyCost} 
+        = case CDB20 of
+               {error, "out of time"} ->
+                  {CDB, 10000};
+               {error, ErrorMsg} ->
+                  {CDB, 1000};
+              _ ->
+                  {CDB20, 0}
+           end,
     %State2 = CDB2#db.state,
     State2 = element(12, CDB2),
     Animal2 = Animal#animal{
@@ -109,7 +118,7 @@ doit2(Animal, Rest, DB3) ->
                 memory1 = State2#state.memory1,
                 memory8 = State2#state.memory8,
                 memory32 = State2#state.memory32,
-                energy = State2#state.energy,
+                energy = State2#state.energy - EnergyCost,
                 health = State2#state.health,
                 pain_front = 0,
                 pain_right = 0,
@@ -160,7 +169,7 @@ doit2(Animal, Rest, DB3) ->
     {Animal3, TaskList} = 
         case Action of
             1 -> 
-                io:fwrite("waited\n"),
+                %io:fwrite("waited\n"),
                 {Animal2, Rest}; %wait
             2 -> %step
                 %io:fwrite("took a step\n"),
@@ -182,7 +191,7 @@ doit2(Animal, Rest, DB3) ->
                         {Animal2, Rest}
                 end;
             3 ->%turn 
-                io:fwrite("turning\n"),
+                %io:fwrite("turning\n"),
                 TurnAmount0 = hd(tl(tl(Stack))),
                 TurnAmount = case TurnAmount0 of
                                   <<1:32>> -> 1;
@@ -190,8 +199,8 @@ doit2(Animal, Rest, DB3) ->
                                   <<3:32>> -> 3;
                                   _ -> 1
                               end,
-                S = "turned " ++ integer_to_list(TurnAmount) ++ " right \n",
-                io:fwrite(S),
+                %S = "turned " ++ integer_to_list(TurnAmount) ++ " right \n",
+                %io:fwrite(S),
                 NewDirection = new_direction(
                                  D,
                                  TurnAmount),
@@ -209,7 +218,6 @@ doit2(Animal, Rest, DB3) ->
                          Rest}
                 end;
             5 -> %attack
-                io:fwrite("attacking\n"),
                 case SpeciesF of
                     0 -> {Animal2, Rest};%nothing to attack
                     _ ->
@@ -256,6 +264,7 @@ doit2(Animal, Rest, DB3) ->
                                 {Animal2, Rest};
                             true ->
                                 BAID = animals:new(SID, {XF, YF}, Time),
+                                {ok, Baby} = animals:read(BAID),
                                 BabyDirection =
                                     case Animal2#animal.direction of
                                         1 -> 3;
@@ -263,7 +272,15 @@ doit2(Animal, Rest, DB3) ->
                                         3 -> 4;
                                         4 -> 2
                                     end,
-                                Animal7=Animal2#animal{energy = Energy, direction = BabyDirection},
+                                Animal7=Animal2#animal{
+                                          energy = Energy, 
+                                          direction = BabyDirection},
+                                Baby2 = Baby#animal{
+                                          memory1 = Animal7#animal.memory1,
+                                          memory8 = Animal7#animal.memory8,
+                                          memory32 = Animal7#animal.memory32
+                                         },
+                                animals:update(Baby2),
                                 board:add_animal(XF, YF, BAID, SID, BabyDirection, Time),
                                 BabyTask = #task{time = Time, animal_id = BAID},
                                 {Animal7,
@@ -274,6 +291,7 @@ doit2(Animal, Rest, DB3) ->
                         {Animal2, Rest}
                 end;
             7 -> %tag
+                %io:fwrite("tagging\n"),
                 Tag0 = hd(tl(tl(Stack))),
                 Tag = case Tag0 of
                           <<_:256>> -> Tag0;
@@ -404,35 +422,39 @@ add_foods(Time, N) ->
     try_add_food(Time),
     add_foods(Time, N-1).
 hour(Time) ->
-    Time rem settings:day_period().
+    DP = settings:day_period(),
+    (Time + (DP div 2)) rem DP.
+    %(Time) rem DP.
 season(Time) ->
-    Time rem settings:year_period().
+    YP = settings:year_period(),
+    (Time + (YP div 2))rem YP.
 day(Time, X, Y) ->
+    %is it daytime at this location and time?
     DP = settings:day_period(),
     YP = settings:year_period(),
     Width = settings:map_width(),
     Height = settings:map_height(),
     Pi = math:pi(),
-    AConst = 1/2,%angle of planet relative to solar disk.
-    (math:cos(2*Pi*((hour(Time)/DP) - (X/Width)))
-        - (((Y + (Height/2))/Height) * AConst 
-           * math:cos(2*Pi*season(Time)/YP))) > 0.
+    DayWave = math:cos(2*Pi*((hour(Time)/DP) - (X/Width))),
+    LatitudeEffect = ((math:cos(2*Pi*Y/Height)+1)/2),
+    SeasonWave = (math:cos(2*Pi*season(Time)/YP)),
+    Season = (LatitudeEffect*SeasonWave),
+    Pronation = 1 + settings:planet_pronation(),
+    (DayWave + (Pronation * Season)) > 0.
 fertility(X) ->
     Width = settings:map_width(),
     Pi = math:pi(),
-    ((1 + math:cos(Pi + (2*Pi*X/Width))) / 2).
+    ((1 + math:cos(Pi + (2*Pi*((X/Width) + (1/4))))) / 2).
 likelyhood(Time, X, Y) ->
     D = day(Time, X, Y),
     F = fertility(X),
     if
         D -> F;
-        true -> F/6
+        true -> F/10
     end.
 try_add_food(Time) ->
     {X, Y} = get_random_location(),
     L = likelyhood(Time, X, Y),
-    %io:fwrite(float_to_list(L)),
-    %io:fwrite("\n"),
     R = random:uniform(),
     if
         (L > R) -> 

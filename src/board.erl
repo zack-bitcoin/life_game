@@ -45,7 +45,7 @@ handle_cast({add_animal, W, H, AID,
             X) -> 
     R = element(H, X),
     L = element(W, R),
-    #location{animal_id = AID0} = L,
+    #location{animal_id = AID0} = L,%maybe we should calculate an empty location at this point.
     case AID0 of
         0 ->
             L2 = L#location{
@@ -111,6 +111,22 @@ sanitize(X, Y) ->
 read(X, Y) ->
     {X2, Y2} = sanitize(X, Y),
     gen_server:call(?MODULE, {read, X2, Y2}).
+read(X, Y, D) ->
+    L = read(X, Y),
+    D2 = twist(L#location.direction, D),
+    L#location{direction = D2}.
+twist(0, _) -> 0;
+twist(X, X) -> 1;
+twist(X, 1) -> X;
+twist(1, 2) -> 3;
+twist(3, 2) -> 4;
+twist(4, 2) -> 2;
+twist(1, 3) -> 2;
+twist(2, 3) -> 4;
+twist(4, 3) -> 3;
+twist(1, 4) -> 4;
+twist(2, 4) -> 3;
+twist(3, 4) -> 2.
 add_food(X, Y) ->
     {X2, Y2} = sanitize(X, Y),
     %S = "adding food " ++ integer_to_list(X2) ++ " " ++ integer_to_list(Y2) ++ "\n",
@@ -165,25 +181,29 @@ empty_location_internal(X, N) ->
     end.
 
 can_see(X, Y, 1) ->%up
-    {read(X, Y),
-     {read(X-1, Y+1), read(X, Y+1), read(X+1, Y+1)},
-     {read(X-2, Y+2), read(X-1, Y+2), read(X, Y+2),
-      read(X+1, Y+2), read(X+2, Y+2)}};
+    F = fun(X, Y) -> read(X, Y, 1) end,
+    {F(X, Y),
+     {F(X-1, Y+1), F(X, Y+1), F(X+1, Y+1)},
+     {F(X-2, Y+2), F(X-1, Y+2), F(X, Y+2),
+      F(X+1, Y+2), F(X+2, Y+2)}};
 can_see(X, Y, 2) ->%left
-    {read(X, Y),
-     {read(X-1, Y-1), read(X-1, Y), read(X-1, Y+1)},
-     {read(X-2, Y-2), read(X-2, Y-1), read(X-2, Y),
-      read(X-2, Y+1), read(X-2, Y+2)}};
+    F = fun(X, Y) -> read(X, Y, 2) end,
+    {F(X, Y),
+     {F(X-1, Y-1), F(X-1, Y), F(X-1, Y+1)},
+     {F(X-2, Y-2), F(X-2, Y-1), F(X-2, Y),
+      F(X-2, Y+1), F(X-2, Y+2)}};
 can_see(X, Y, 3) ->%right
-    {read(X, Y),
-     {read(X+1, Y+1), read(X+1, Y), read(X+1, Y-1)},
-     {read(X+2, Y+2), read(X+2, Y+1), read(X+2, Y),
-      read(X+2, Y-1), read(X+2, Y-2)}};
+    F = fun(X, Y) -> read(X, Y, 3) end,
+    {F(X, Y),
+     {F(X+1, Y+1), F(X+1, Y), F(X+1, Y-1)},
+     {F(X+2, Y+2), F(X+2, Y+1), F(X+2, Y),
+      F(X+2, Y-1), F(X+2, Y-2)}};
 can_see(X, Y, 4) ->%down
-    {read(X, Y),
-     {read(X+1, Y-1), read(X, Y-1), read(X-1, Y-1)},
-     {read(X+2, Y-2), read(X+1, Y-2), read(X, Y-2),
-      read(X-1, Y-2), read(X-2, Y-2)}}.
+    F = fun(X, Y) -> read(X, Y, 4) end,
+    {F(X, Y),
+     {F(X+1, Y-1), F(X, Y-1), F(X-1, Y-1)},
+     {F(X+2, Y-2), F(X+1, Y-2), F(X, Y-2),
+      F(X-1, Y-2), F(X-2, Y-2)}}.
 
 view(X, Y, CanSee) ->
     %grab vision info for a point in the data from can_see
