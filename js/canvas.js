@@ -8,7 +8,7 @@ var c = document.getElementById("myCanvas");
 var ctx = c.getContext("2d");
 
 c.style.width = window.innerWidth - 10;
-c.style.height = window.innerHeight - 20;
+c.style.height = window.innerHeight - 40;
 var square_length = 100;
 
 var tile_width = Math.round(c.width / square_length);

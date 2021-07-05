@@ -1,5 +1,3 @@
-A work in progress
-
 Game of Life
 =========
 
