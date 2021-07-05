@@ -7,6 +7,8 @@ The animals compete for resources, and can fight.
 
 If your animal is successful, it will reproduce, passing your code to it's children, and eventually become a dominant strain of life on the simulated world.
 
+[see the game live](http://46.101.185.98:8000/board.html)
+
 What Animals can do?
 ===================
 
