@@ -207,9 +207,11 @@ can_see(X, Y, 4) ->%down
 
 view(X, Y, CanSee) ->
     %grab vision info for a point in the data from can_see
+    <<M1:32>> = <<-1:32>>,
+    <<M2:32>> = <<-2:32>>,
     case {X, Y} of
         {0, 0} -> element(1, CanSee);
-        {-1, 1} -> 
+        {M1, 1} -> 
             C = element(2, CanSee),
             element(1, C);
         {0, 1} ->
@@ -218,10 +220,10 @@ view(X, Y, CanSee) ->
         {1, 1} ->
             C = element(2, CanSee),
             element(3, C);
-        {-2, 2} -> 
+        {M2, 2} -> 
             C = element(3, CanSee),
             element(1, C);
-        {-1, 2} -> 
+        {M1, 2} -> 
             C = element(3, CanSee),
             element(2, C);
         {0, 2} -> 

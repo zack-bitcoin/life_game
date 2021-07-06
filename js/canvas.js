@@ -37,9 +37,12 @@ async function test(){
                 draw(i, j, "food");
             };
             if((species).toString() === focus){
-                draw(i, j, "animal", 70); 
+                draw(i, j, "animal", 62); 
             } else if(!(species === 0)){
                 draw(i, j, "animal", species);
+            };
+            if(!(direction === 0)){
+                draw_direction(i, j, direction);
             };
         };
     };
@@ -75,8 +78,12 @@ var white_left_pic = document.getElementById('white_left');
 var white_right_pic = document.getElementById('white_right');
 var yellow_left_pic = document.getElementById('yellow_left');
 var yellow_right_pic = document.getElementById('yellow_right');
+var up_pic = document.getElementById('up');
+var down_pic = document.getElementById('down');
+var right_pic = document.getElementById('right');
+var left_pic = document.getElementById('left');
 var right_pics = [
-    blue_right_pic,
+    //blue_right_pic,
     cyan_right_pic,
     green_right_pic,
     light_blue_right_pic,
@@ -88,7 +95,7 @@ var right_pics = [
     yellow_right_pic
 ];
 var left_pics = [
-    blue_left_pic,
+    //blue_left_pic,
     cyan_left_pic,
     green_left_pic,
     light_blue_left_pic,
@@ -99,6 +106,20 @@ var left_pics = [
     //white_left_pic,
     yellow_left_pic
 ];
+
+function draw_direction(y, x, d){
+    x = Math.round(x * c.width / square_length);
+    y = Math.round(y * c.height / square_length);
+    if(d === 4){
+        ctx.drawImage(up_pic, x, y, tile_width, tile_height);
+    } else if(d === 1){
+        ctx.drawImage(down_pic, x, y, tile_width, tile_height);
+    } else if(d === 3){
+        ctx.drawImage(right_pic, x, y, tile_width, tile_height);
+    } else if(d === 2){
+        ctx.drawImage(left_pic, x, y, tile_width, tile_height);
+    };
+};
 
 function draw(y, x, thing, species) {
     x = Math.round(x * c.width / square_length);

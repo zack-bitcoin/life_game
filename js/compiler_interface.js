@@ -121,6 +121,90 @@ energy 100000 > if reproduce else then
 %walking
 walk
 
+`],
+        ["pursue", `
+%waits until an enemy is near.
+
+macro cooldown 25 ;
+macro wait 14 1 return ;
+macro eat cooldown 4 return ;
+macro attack 9 5 return ;
+macro turn 1 14 3 return ;
+macro turn_left 3 14 3 return ;
+macro turn_back 2 14 3 return ;
+macro reproduce cooldown 6 return ;
+macro walk 25 2 return ;
+macro walk_quick 15 2 return ;
+
+macro escape_flag 2 ;
+macro my_species 3 ;
+macro turn_left_flag 4 ;
+macro turn_right_flag 5 ;
+macro turn_back_flag 6 ;
+
+macro check_direction look car swap drop car swap ( species [direction] )
+   dup my_species @8 =2 if drop drop 0 else drop car drop then;
+macro check_direction_food look car drop ;
+macro escape 1 escape_flag !1 turn ;
+
+%find out own species
+my_species @8 if else
+0 0 look car swap drop car drop my_species !8 then
+
+turn_left_flag @1 if 0 turn_left_flag !1 turn_left else then
+
+turn_right_flag @1 if 0 turn_right_flag !1 turn else then
+
+turn_back_flag @1 if 0 turn_back_flag !1 turn_back else then
+
+% look [food, species, direction]
+
+
+%eating
+ smell_food if eat else then 
+
+escape_flag @1 if 0 escape_flag !1 1 turn_back_flag !1 walk_quick else then
+
+%pursue
+2 0 check_direction 1 =2 if walk else then
+2 0 check_direction 2 =2 if walk else then
+2 0 1 - check_direction 2 =2 if walk else then
+2 0 check_direction 3 =2 if walk else then
+2 1 check_direction 3 =2 if walk else then
+
+1 0 check_direction 4 =2 if escape else then
+2 0 check_direction 4 =2 if escape else then
+
+%turning
+ smell_animal car drop my_species @8 == if turn else then
+%attacking
+ smell_animal car drop if attack else then 
+
+%seek food
+1 0 check_direction_food if walk else then
+1 1 check_direction_food if walk else then
+1 0 1 - check_direction_food if 1 turn_left_flag !1 walk else then
+2 0 check_direction_food if walk else then
+2 1 check_direction_food if walk else then
+2 0 1 - check_direction_food if walk else then
+2 2 check_direction_food if 1 turn_right_flag !1 walk else then
+2 0 2 - check_direction_food if 1 turn_left_flag !1 walk else then
+
+
+1 1 check_direction 2 =2 if wait else then
+1 1 check_direction 3 =2 if 1 turn_right_flag !1 walk_quick else then
+1 0 1 - check_direction 3 =2 if wait else then
+1 0 1 - check_direction 2 =2 if 1 turn_left_flag !1 walk_quick else then
+
+
+
+%reproducing
+energy 100000 > if reproduce else then 
+
+random 4 split swap drop 10 rem 0 =2 if 40 2 return else turn then
+% turn
+
+
 `]
     ]);
 

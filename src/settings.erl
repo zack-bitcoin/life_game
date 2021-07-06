@@ -6,12 +6,12 @@ day_period() -> 60 * tick_frequency().
 year_period() -> 20 * day_period().
 map_width() -> 100.
 map_height() -> 100.
-food_per_day() -> 2000.
+food_per_day() -> 500.
 energy_in_food() -> energy() div 2.
 %todo. opcode costs.
-wait_cost() -> 10.
+wait_cost() -> 5.
 step_cost() -> 100.
-turn_cost() -> 100.
+turn_cost() -> 10.
 eat_cost() -> 100.
 attack_cost() -> 100.
 reproduce_cost() -> 100.

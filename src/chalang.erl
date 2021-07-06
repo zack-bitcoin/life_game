@@ -145,8 +145,12 @@ data_maker(OpGas, RamGas, Vars, Funs, ScriptSig, SPK, State, HashSize, Version, 
     
 %run2 processes a single opcode of the script. in comparison to run3/2, run2 is able to edit more aspects of the RUN2's state. run2 is used to define functions and variables. run3/2 is for all the other opcodes. 
 run5(A, D) ->
-    true = balanced_f(A, 0),
-    run1([A], D).
+    B = balanced_f(A, 0),
+    if
+        B ->
+            run1([A], D);
+        true -> {error, "unbalanced"}
+    end.
 run1(_, {error, S}) ->
     io:fwrite("had an error\n"),
     io:fwrite(S),
@@ -786,7 +790,7 @@ run4(?recall_byte, D) ->
             if
                 not(is_integer(Key)) ->
                     {error, "bad recall byte key"};
-                (Key < 0) ->
+                (Key < 1) ->
                     {error, "negative byte recall key"};
                 (Key > BS) ->
                     {error, "byte recall out of range"};
