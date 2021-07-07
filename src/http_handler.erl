@@ -43,7 +43,7 @@ doit({add, Code}) ->
     birthing:add_animal(Animal),
     {ok, SID};
 doit({read}) ->
-    {ok, board_cache:read()};
+    {ok, {time:get(), board_cache:read()}};
 doit({read, 1, ID}) ->
     {ok, animals:read(ID)};
 doit({read, 2, 1, ID}) ->

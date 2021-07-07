@@ -38,5 +38,6 @@
           smell_age = 0,
           animal_id = 0,
           species_id = 0,
-          direction = 0
+          direction = 0,
+          day = 1
          }).

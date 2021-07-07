@@ -1,7 +1,6 @@
 
 const urlParams = new URLSearchParams(window.location.search);
 var focus = urlParams.get('focus');
-console.log(focus);
 
 
 var c = document.getElementById("myCanvas");
@@ -21,13 +20,55 @@ function blank(ctx){
     ctx.fillStyle = "white";
     ctx.fill();
 };
+function tick_frequency(){
+    return(60);
+};
+function day_period() {
+    return(60 * tick_frequency());
+};
+function year_period(){
+    return(20 * day_period());
+};
+function hour(time){
+    var dp = day_period();
+    return(Math.round((time + (dp / 2)) % dp));
+};
+function season(time) {
+    var yp = year_period();
+    return(Math.round((time + (yp / 2)) % yp));
+};
+function planet_pronation(){
+    return(0.2);
+};
+function day(time, x, y) {
+    var dp = day_period();
+    var yp = year_period();
+    var width = 100;
+    var height = 100;
+    var pi = Math.PI;
+    var day_wave = Math.cos(2*pi*((hour(time)/dp) - (x/width)));
+    var latitude_effect = ((Math.cos(2*pi*y/height)+1)/2);
+    var season_wave = (Math.cos(2*pi*season(time)/yp));
+    var s = (latitude_effect * season_wave);
+    var pronation = 1 + planet_pronation();
+    return((day_wave + (pronation * s)) > 0);
+};
 
 async function test(){
-    var board = await rpc.apost(["read"]);
+    var board0 = await rpc.apost(["read"]);
+    var time = board0[1];
+    var board = board0[2];
+
+    //console.log(time);
+    
     //console.log(JSON.stringify(board));
     blank(ctx);
     for(var i = 1; i<board.length; i++){
         for(var j = 1; j<board[1].length; j++){
+            //console.log(day(time, j, i));
+            if(!(day(time, j, i))){
+                draw(i, j, "grey");
+            };
             var location = board[i][j];
             //console.log(location);
             var food = location[1];
@@ -127,9 +168,14 @@ function draw(y, x, thing, species) {
     //console.log([x,y]);
     var pic;
     var food_pic = document.getElementById('food');
+    var grey_pic = document.getElementById('grey');
     if(thing === "food") {
         ctx.drawImage(
             food_pic, x, y,
+            tile_width, tile_height);
+    } else if(thing === "grey") {
+        ctx.drawImage(
+            grey_pic, x, y,
             tile_width, tile_height);
     } else if(thing === "animal"){
         //console.log(species);

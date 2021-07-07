@@ -13,6 +13,7 @@ doit() ->
 
 doit(DB) ->
     %first check if there are new animals to drop.
+    time:set(DB#db.time),
     {B, BLocation} = birthing:next(),
     DB2 = case B of
               0 -> DB;
@@ -79,7 +80,7 @@ doit2(Animal, Rest, DB3) ->
     
     State = #state{
       display = Animal#animal.message,
-      can_see = board:can_see(X, Y, D),
+      can_see = board:can_see(X, Y, D, Time),
       smell_animal = [SpeciesF, Message],
       smell_tile = [LocationF#location.smell_species, LocationF#location.smell_age],
       smell_tile_tag = Location#location.tag,

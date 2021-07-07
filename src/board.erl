@@ -5,7 +5,7 @@
 read/2,add_food/2,remove_food/2,change_tag/3,
 add_animal/6,animal_direction/3,remove_animal/2,
 
-can_see/3, view/3,
+can_see/4, view/3,
 
 empty_location/0, all/0
 ]).
@@ -111,10 +111,16 @@ sanitize(X, Y) ->
 read(X, Y) ->
     {X2, Y2} = sanitize(X, Y),
     gen_server:call(?MODULE, {read, X2, Y2}).
-read(X, Y, D) ->
+read(X, Y, D, Time) ->
+    B = mainloop:day(Time, X, Y),
     L = read(X, Y),
     D2 = twist(L#location.direction, D),
-    L#location{direction = D2}.
+    L2 = L#location{direction = D2},
+    if
+        B -> L2;
+        true -> #location{day = 0}
+    end.
+
 twist(0, _) -> 0;
 twist(X, X) -> 1;
 twist(X, 1) -> X;
@@ -180,26 +186,26 @@ empty_location_internal(X, N) ->
         _ -> empty_location_internal(X, N-1)
     end.
 
-can_see(X, Y, 1) ->%up
-    F = fun(X, Y) -> read(X, Y, 1) end,
+can_see(X, Y, 1, Time) ->%up
+    F = fun(X, Y) -> read(X, Y, 1, Time) end,
     {F(X, Y),
      {F(X-1, Y+1), F(X, Y+1), F(X+1, Y+1)},
      {F(X-2, Y+2), F(X-1, Y+2), F(X, Y+2),
       F(X+1, Y+2), F(X+2, Y+2)}};
-can_see(X, Y, 2) ->%left
-    F = fun(X, Y) -> read(X, Y, 2) end,
+can_see(X, Y, 2, Time) ->%left
+    F = fun(X, Y) -> read(X, Y, 2, Time) end,
     {F(X, Y),
      {F(X-1, Y-1), F(X-1, Y), F(X-1, Y+1)},
      {F(X-2, Y-2), F(X-2, Y-1), F(X-2, Y),
       F(X-2, Y+1), F(X-2, Y+2)}};
-can_see(X, Y, 3) ->%right
-    F = fun(X, Y) -> read(X, Y, 3) end,
+can_see(X, Y, 3, Time) ->%right
+    F = fun(X, Y) -> read(X, Y, 3, Time) end,
     {F(X, Y),
      {F(X+1, Y+1), F(X+1, Y), F(X+1, Y-1)},
      {F(X+2, Y+2), F(X+2, Y+1), F(X+2, Y),
       F(X+2, Y-1), F(X+2, Y-2)}};
-can_see(X, Y, 4) ->%down
-    F = fun(X, Y) -> read(X, Y, 4) end,
+can_see(X, Y, 4, Time) ->%down
+    F = fun(X, Y) -> read(X, Y, 4, Time) end,
     {F(X, Y),
      {F(X+1, Y-1), F(X, Y-1), F(X-1, Y-1)},
      {F(X+2, Y-2), F(X+1, Y-2), F(X, Y-2),

@@ -6,7 +6,7 @@ day_period() -> 60 * tick_frequency().
 year_period() -> 20 * day_period().
 map_width() -> 100.
 map_height() -> 100.
-food_per_day() -> 500.
+food_per_day() -> 1000.
 energy_in_food() -> energy() div 2.
 %todo. opcode costs.
 wait_cost() -> 5.

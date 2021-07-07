@@ -858,9 +858,8 @@ run4(?look, D) ->
                 V ->
                     V2 = [<<(V#location.food):32>>,
                           <<(V#location.species_id):32>>,
-                          <<(V#location.direction):32>>],%need to rotate this relative to your perspective direction
-                    %io:fwrite(packer:pack(V2)),
-                    %io:fwrite("\n"),
+                          <<(V#location.direction):32>>,
+                          <<(V#location.day):32>>],
                     D#d{stack = [V2|T],
                         op_gas = D#d.op_gas - 1,
                         ram_current = D#d.ram_current + 3}

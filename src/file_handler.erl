@@ -37,6 +37,7 @@ handle(Req, State) ->
 	       <<"/right.png">> -> F0;
 	       <<"/down.png">> -> F0;
 	       <<"/empty.png">> -> F0;
+	       <<"/grey.png">> -> F0;
 	       <<"/main.html">> -> F0;
 	       <<"/board.html">> -> F0;
 	       <<"/make_animal.html">> -> F0;
