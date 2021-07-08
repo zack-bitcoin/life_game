@@ -16,12 +16,18 @@ remember, look, smell, walk, eat, attack, reproduce, record a smell on a tile, a
 
 You give them detailed instructions on how to live, and they obey. Their children will have the same instructions.
 
+[documentation of the language](/docs/opcodes.md)
 
-with language based on https://github.com/zack-bitcoin/chalang
+the language is based on https://github.com/zack-bitcoin/chalang
 
 to start a node with these libraries loaded:
 
+Turn on a server to host the game
+=========
+
 sh start.sh
+
+visit your self-hosted world: http://0.0.0.0:8000/board.html
 
 
 
